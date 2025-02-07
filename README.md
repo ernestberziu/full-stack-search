@@ -80,8 +80,8 @@ When clicking on one of the `Hotels`, `Cities` or `Countries` links, the applica
 
 ### Limitations
 
-Given the time constraints, we do not expect a fully production-ready solution. We're primarily interested in the approach and the overall quality of the solution. 
-Feel free to modify the current codebase as needed, including adding or removing dependencies. 
+Given the time constraints, we do not expect a fully production-ready solution. We're primarily interested in the approach and the overall quality of the solution.
+Feel free to modify the current codebase as needed, including adding or removing dependencies.
 For larger or more time-intensive changes, you're welcome to outline your ideas in the write-up section below and discuss them further during the call.
 
 <img src="./assets/search-example.png" width="400px" />
@@ -90,7 +90,80 @@ For larger or more time-intensive changes, you're welcome to outline your ideas 
 
 <!-- Write-up/conclusion section -->
 
-_When all the behaviour is implemented, feel free to add some observations or conclusions you like to share in the section_
+#### Setup
+
+- I am using my own MongoDB server, so before starting the applications, you will need to copy `.env.sample` into `.env` on the api folder
+
+#### Decisions I've taken regarding developing a performant solution are explained below on both ends:
+
+##### Backend:
+
+- I've decided to use atlas search index for searching among the hotels collection, which in real life app can scale big. Index definition is:
+
+```json
+{
+  "mappings": {
+    "dynamic": true,
+    "fields": {
+      "addressline1": {
+        "type": "string"
+      },
+      "chain_name": {
+        "type": "string"
+      },
+      "city": [
+        {
+          "type": "autocomplete"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "country": [
+        {
+          "type": "autocomplete"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "hotel_name": [
+        {
+          "type": "autocomplete"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "state": {
+        "type": "string"
+      },
+      "zipcode": {
+        "type": "string"
+      }
+    }
+  },
+  "storedSource": {
+    "include": ["hotel_name"]
+  }
+}
+```
+
+I chose to use autocomplete for partially match hotel name, country and city, as well as string for full text search of hotel and chain name, and above mentioned location fields. Atlas search brings too many benefits when having complex search queries in collections that tends to be scalable and considered big, compared to other options as regex which can bring performance issues on big data queries. storedSource is including hotel name, because for this solution we only need the hotel name to display to the user interface, which is another addition to the performance optimizations. In real life app, we could also use fuzzy search and its options, to accomodate better product needs and implement a more refined search rules.
+
+- I am boosting atlas search rules, which helps returning more relevant data on top of the list
+- For countries and cities, which also in real life app can be a defined size collection, using atlas search for querying name would be an overkill compared to just using plain regex for querying on partial string matches, so I've decided to use regex for these two cases
+- Last improvement I added on this scenario on the backend side, is paginating the hotels search. In this case is mostly a hack, as the search endpoint should query through three different collections, making pagination challenging. However, given the acceptance criteria of this scenario, countries and cities will be always rendered at the bottom of the hotels list, even if unpaginated. This detail gives us the freedom and ability to safely paginate hotels while scrolling down the list and not query for countries and cities until all hotels have been queried, reducing by this the response size and eventually the response time.
+
+##### Frontend:
+
+- On the frontend size, first improvement is to debounce the search input to only call the backend when the user stops typing
+- Another improvement on the frontend sides is using tanstack query (or similar products for external state management) with built in cache functionalities. With that, we are creating cache entries for every search query the user is calling the backend, so the next time the user queries for the exact same search, we show immediate feedback on the screen while the api call is being resolved, and update right after if the backend response differs from the cached one. This will reduce the waiting time on the frontend on possible repeated api calls.
+- Last improvement we can add on the frontend, although the response is paginated, is to use a virtualized list, which not only acts as an infinite scroller, but also removes list items that are no longer visible to the list viewport from the DOM, making the DOM not heavy when having big lists.
+
+#### Assumptions
+
+For timely reasons, I've not put any effort on the ui and nor proper folder structures, although still tried to have meaningful logic separations.
 
 ### Database structure
 
