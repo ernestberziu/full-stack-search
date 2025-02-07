@@ -1,5 +1,6 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { AggregatePaginateModel, Schema } from 'mongoose';
 import { City, Country, Hotel } from './interfaces';
+import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2';
 
 export const CityModel = mongoose.model(
   'cities',
@@ -29,5 +30,5 @@ export const HotelModel = mongoose.model(
     country: String,
     countryisocode: String,
     star_rating: Number,
-  })
-);
+  }).plugin(mongooseAggregatePaginate)
+) as AggregatePaginateModel<Hotel>;

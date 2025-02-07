@@ -1,8 +1,8 @@
 import { Types } from 'mongoose';
 import { CityModel, CountryModel, HotelModel } from './models';
 
-export const searchHotels = (query: string) => {
-  return HotelModel.aggregate([
+export const searchHotels = (query: string, page: number, limit: number) => {
+  const aggregate = HotelModel.aggregate([
     {
       $search: {
         index: 'atlas_search_hotels_index',
@@ -54,6 +54,12 @@ export const searchHotels = (query: string) => {
       },
     },
   ]);
+
+  return HotelModel.aggregatePaginate(aggregate, {
+    page,
+    limit,
+    useFacet: false,
+  });
 };
 
 export const searchCountries = (query: string) =>

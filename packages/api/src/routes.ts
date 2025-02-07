@@ -14,7 +14,15 @@ const router = Router();
 
 router.get(
   '/search',
-  async (req: Request<void, SearchResponse, void, { q?: string }>, res) => {
+  async (
+    req: Request<
+      void,
+      SearchResponse,
+      void,
+      { q?: string; page?: string; limit?: string }
+    >,
+    res
+  ) => {
     const query = req.query.q;
 
     if (!query?.length) {
@@ -23,14 +31,23 @@ router.get(
     }
 
     try {
-      const hotels = await searchHotels(query);
+      const hotels = await searchHotels(
+        query,
+        Number(req.query.page ?? 1),
+        Number(req.query.limit ?? 10)
+      );
 
-      const [countries, cities] = await Promise.all([
-        searchCountries(query),
-        searchCities(query),
-      ]);
+      let countries: Country[] = [];
+      let cities: City[] = [];
 
-      res.send({ hotels, countries, cities });
+      if (!hotels.hasNextPage) {
+        [countries, cities] = await Promise.all([
+          searchCountries(query),
+          searchCities(query),
+        ]);
+      }
+
+      res.send({ hotels: hotels.docs, countries, cities });
     } catch (e) {
       console.log(e);
       throw new Error('Something went wrong');
