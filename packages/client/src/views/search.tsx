@@ -1,16 +1,31 @@
 import { useDebouncedState } from '../utils';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import { SearchResponse } from '../interfaces';
+import { Components, GroupedVirtuoso } from 'react-virtuoso';
+import { makeGroupCounts, toGroupedData } from './search.utils';
 
 export function Search() {
   const { value, debouncedValue, setValue } = useDebouncedState('', 200);
-  const { data } = useQuery({
+
+  const {
+    data = [],
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['search', debouncedValue],
-    queryFn: () =>
-      api.get(`/search?q=${debouncedValue}`) as Promise<SearchResponse>,
+    queryFn: ({ pageParam }) =>
+      api.get(
+        `/search?q=${debouncedValue}&page=${pageParam}&limit=${10}`
+      ) as Promise<SearchResponse>,
     enabled: !!debouncedValue,
+    getNextPageParam: (page) => page.hotels.nextPage,
+    initialPageParam: 1,
+    select: toGroupedData,
   });
+
+  const counts = makeGroupCounts(data, hasNextPage);
 
   return (
     <div className="App">
@@ -33,56 +48,40 @@ export function Search() {
                   </button>
                 )}
               </div>
-              {!!data && (
-                <div className="search-dropdown-menu dropdown-menu w-100 show p-2">
-                  <h2>Hotels</h2>
-                  {data.hotels.length ? (
-                    data.hotels.map((hotel) => (
-                      <li key={hotel._id}>
+              {!!data.length && (
+                <div className="dropdown-menu w-100 show p-2">
+                  <GroupedVirtuoso
+                    context={{ loading: isFetchingNextPage }}
+                    increaseViewportBy={100}
+                    endReached={() => {
+                      if (hasNextPage) {
+                        fetchNextPage();
+                      }
+                    }}
+                    style={{ height: 300 }}
+                    groupCounts={counts}
+                    groupContent={(index) => {
+                      return (
+                        <div>
+                          <h2>{['Hotels', 'Countries', 'Cities'][index]}</h2>
+                          {!counts[index] && <div>No data found</div>}
+                        </div>
+                      );
+                    }}
+                    itemContent={(index, groupIndex) => {
+                      return (
                         <a
-                          href={`/hotel/${hotel._id}`}
+                          href={`/${['hotel', 'country', 'city'][groupIndex]}/${
+                            data[index].id
+                          }`}
                           className="dropdown-item"
                         >
-                          <i className="fa fa-building mr-2"></i>
-                          {hotel.hotel_name}
+                          {data[index].name}
                         </a>
-                        <hr className="divider" />
-                      </li>
-                    ))
-                  ) : (
-                    <p>No hotels matched</p>
-                  )}
-                  <h2>Countries</h2>
-                  {data.countries.length ? (
-                    data.countries.map((country) => (
-                      <li key={country._id}>
-                        <a
-                          href={`/country/${country._id}`}
-                          className="dropdown-item"
-                        >
-                          <i className="fa fa-building mr-2"></i>
-                          {country.country}
-                        </a>
-                        <hr className="divider" />
-                      </li>
-                    ))
-                  ) : (
-                    <p>No countries matched</p>
-                  )}
-                  <h2>Cities</h2>
-                  {data.cities.length ? (
-                    data.cities.map((city) => (
-                      <li key={city._id}>
-                        <a href={`/city/${city._id}`} className="dropdown-item">
-                          <i className="fa fa-building mr-2"></i>
-                          {city.name}
-                        </a>
-                        <hr className="divider" />
-                      </li>
-                    ))
-                  ) : (
-                    <p>No cities matched</p>
-                  )}
+                      );
+                    }}
+                    components={{ Footer }}
+                  />
                 </div>
               )}
             </div>
@@ -92,3 +91,11 @@ export function Search() {
     </div>
   );
 }
+
+const Footer: Components<any, { loading: boolean }>['Footer'] = ({
+  context,
+}) => {
+  if (context?.loading) {
+    return 'Loading...';
+  }
+};

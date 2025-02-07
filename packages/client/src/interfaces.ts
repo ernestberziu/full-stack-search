@@ -14,7 +14,7 @@ export interface Hotel {
 }
 
 export interface SearchResponse {
-  hotels: Hotel[];
+  hotels: { docs: Hotel[]; hasNextPage: boolean; nextPage: number };
   countries: Country[];
   cities: City[];
 }

@@ -1,5 +1,4 @@
 import { Request, Router } from 'express';
-import { HotelModel } from './models';
 import { City, Country, Hotel, SearchResponse } from './interfaces';
 import {
   getCityById,
@@ -26,7 +25,11 @@ router.get(
     const query = req.query.q;
 
     if (!query?.length) {
-      res.send({ hotels: [], countries: [], cities: [] });
+      res.send({
+        hotels: { docs: [], hasNextPage: false, nextPage: 1 },
+        countries: [],
+        cities: [],
+      });
       return;
     }
 
@@ -47,7 +50,7 @@ router.get(
         ]);
       }
 
-      res.send({ hotels: hotels.docs, countries, cities });
+      res.send({ hotels, countries, cities });
     } catch (e) {
       console.log(e);
       throw new Error('Something went wrong');

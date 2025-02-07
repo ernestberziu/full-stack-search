@@ -87,7 +87,6 @@ body {
   margin: 0.5rem;
 }
 
-.search-dropdown-menu {
-  max-height: 450px;
-  overflow: scroll;
+.dropdown-menu h2 {
+  background: white;
 }

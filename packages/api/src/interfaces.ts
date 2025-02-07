@@ -1,3 +1,5 @@
+import { AggregatePaginateResult } from 'mongoose';
+
 export interface City {
   name: string;
 }
@@ -21,7 +23,10 @@ export interface Hotel {
 }
 
 export interface SearchResponse {
-  hotels: Hotel[];
+  hotels: Pick<
+    AggregatePaginateResult<Hotel>,
+    'docs' | 'hasNextPage' | 'nextPage'
+  >;
   countries: Country[];
   cities: City[];
 }
